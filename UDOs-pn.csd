@@ -54,6 +54,7 @@ opcode sndfl_looper, aa, Skkkki
     xout aSndfl1,aSndfl2 
 endop
 
+;; allows flexible wrap around looping of a funciton table
 opcode ft_looper, aa, iikkkki
   iFt1, iFt2, kSpeed, kLoopStart, kLoopSize, kStereoOffset, iWndwFt xin
   setksmps 1
