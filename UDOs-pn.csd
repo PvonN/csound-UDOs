@@ -54,7 +54,6 @@ opcode sndfl_looper, aa, Skkkki
     xout aSndfl1,aSndfl2 
 endop
 
-;; allows flexible wrap around looping of a funciton table
 opcode ft_looper, aa, iikkkki
   iFt1, iFt2, kSpeed, kLoopStart, kLoopSize, kStereoOffset, iWndwFt xin
   setksmps 1
@@ -101,7 +100,7 @@ endop
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; utilities
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-opcode ctrl_arr,a,ki[]oo
+opcode ctrl_arr,a,ai[]oo
   ;; iNormOutput default 0 -> no normalization of output
   ;; iInterp default 0 -> no interpolation between array values
   ;; reads an array as input and outputs control signals with the
@@ -114,7 +113,7 @@ opcode ctrl_arr,a,ki[]oo
   ;; of the array
   
   ;; input
-  kSpeed,iArr[],iNormOutput,iInterp xin 
+  aIndex,iArr[],iNormOutput,iInterp xin 
 
   ;; create table from array
   if iNormOutput == 1 then
@@ -125,7 +124,6 @@ opcode ctrl_arr,a,ki[]oo
   copya2ftab iArr,iTable
 
   ;; read the table
-  aIndex phasor kSpeed
   if iInterp == 1 then
     iLimit = 1-1/(lenarray(iArr))
     aCtrl tablei aIndex*iLimit,iTable,1
@@ -311,10 +309,9 @@ endop
 ; erzeugt einen Array für Startzeiten resultierenden aus einen
 ; Array welcher Aufrufdauern für ein Instrument beinhaltet
 opcode StartTimeFromDuration_Array, i[], i[]
-  ; creates an array for starttimes from a array with holds durations
+  ; creates an array for starttimes from a array with durations
   ; for instrumentcalls 
   ; to work together with instrument trigger opcodes like 'event'
-  ; See 'Funktionslust-Hauptsequenz'
   iDurArr[] xin 
 
   iStartTimeArr[] init lenarray(iDurArr)
@@ -353,7 +350,6 @@ opcode AddSynth,a,i[]i[]iooo
 endop
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; feedback-version
 ;;; creates recursive an array of delayl-line where one signal after the
 ;;; next is fed into the next delay line
 ;;; can create delay time offsets for each instance in samples
@@ -376,39 +372,6 @@ opcode recursiveFeedbackDelay, a, akkkip
   ;; recursion
   if iInstances > 1 then
     aDelOut = recursiveFeedbackDelay(aDelOut, kDelTime+kOffset, kDelOffset,
-    kFdbk, iDelBuf, iInstances-1)
-  endif
-  ;; output limiting
-  aDelOut limit aDelOut, -1, 1
-  ;; output
-  xout aDelOut
-  ;;; UDO by philipp neumann
-endop
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; adding-version
-;;; creates recursive an array of delayl-line where one signal after the
-;;; next is fed into the next delay line
-;;; can create delay time offsets for each instance in samples
-opcode delayline_array, a, akkkip
-  ;; kontrol-rate set on sample-rate
-  setksmps 1
-  ;; inputs: signal, delay-time, delay-time offset added to every
-  ;; instance in samples, feedback ratio (use negative feedback ratios
-  ;; for not creating DC-Offsets), delay buffer size, number of
-  ;; instances
-  aDelIn, kDelTime, kDelOffset, kFdbk, iDelBuf, iInstances xin
-  ;; basics delay-line
-  aDelDump delayr iDelBuf
-  aDelTap deltap kDelTime
-  delayw aDelIn + (aDelTap * kFdbk)
-  ;; signal limiting
-  aDelOut limit aDelTap, -1, 1
-  ;; delay-time-offset in samples
-  kOffset = kDelOffset/sr
-  ;; recursion
-  if iInstances > 1 then
-    aDelOut += delayline_array(aDelOut, kDelTime+kOffset, kDelOffset,
     kFdbk, iDelBuf, iInstances-1)
   endif
   ;; output limiting
@@ -576,4 +539,40 @@ opcode stereo_enhancer, aa, aa
   aOut1 sum aLP1, aHPleft, aMidsLeft
   aOut2 sum aLP2, aHPright, aMidsRight
   xout aOut1, aOut2 
+endop
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Doom Compressor
+opcode doom_cmpr,aa,aakkkkip
+  ;; extreme upward two-band-compression of everything below a certain
+  ;; threshold
+  ;; the signal is splitted into two bands; the lower band can be
+  ;; amplified
+  ;; iTime multiplies the default attack and release times
+  ;; iInstances creates recursion and can implement multiple
+  ;; instances of the doom_cmpr
+  aDoomIn1,aDoomIn2,kThresh,kSplitFreq,kBassGain,kDryWet,iTime,iInstances \
+    xin
+  aSplitHigh1 butterhp aDoomIn1,kSplitFreq
+  aSplitHigh2 butterhp aDoomIn2,kSplitFreq
+  aSplitLow1 butterlp aDoomIn1,kSplitFreq
+  aSplitLow2 butterlp aDoomIn2,kSplitFreq
+  aExpHigh1 dam aSplitHigh1,kThresh,1,100,0.03*iTime,5*iTime
+  aExpHigh2 dam aSplitHigh2,kThresh,1,100,0.03*iTime,5*iTime
+  aExpLow1 dam aSplitLow1,kThresh,1,100,0.03*iTime,5*iTime
+  aExpLow2 dam aSplitLow2,kThresh,1,100,0.03*iTime,5*iTime
+  aExpLow1 = aExpLow1*ampdbfs(kBassGain)
+  aExpLow2 = aExpLow2*ampdbfs(kBassGain)
+  aSum1 sum aExpHigh1,aExpLow1
+  aSum2 sum aExpHigh2,aExpLow2
+  aLimit1 clip aSum1,2,ampdbfs(0)
+  aLimit2 clip aSum2,2,ampdbfs(0)
+  aDoomOut1 sum aLimit1*kDryWet,aDoomIn1*(1-kDryWet)
+  aDoomOut2 sum aLimit2*kDryWet,aDoomIn2*(1-kDryWet)
+
+  if iInstances>1 then
+    aDoomOut1,aDoomOut2 doom_cmpr \
+      aDoomOut1,aDoomOut2,kThresh,kSplitFreq,kBassGain,kDryWet,iTime,iInstances-1
+  endif
+
+  xout aDoomOut1,aDoomOut2
 endop
