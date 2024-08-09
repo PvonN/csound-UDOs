@@ -1,0 +1,38 @@
+* Csound-UDOs
+This is my collection of UDOs for Csound. Feel free to use these in your work with Csound.
+
+Csound is a sound and music computing system. Other then pure data or
+Max/MSP Csound is a text based system. UDOs are comparable to
+abstractions in Max and PD.
+
+This respository is mainly for backup reasons. But please report
+issues or create a pull request when you find some errors.
+
+** About
+A directory for UDOs (file.udo) and examples (file.csd) how to use
+them. In udo_collection.udo you can find every udo of this repo and
+you can link this file to your csound file.
+
+*** Utilities
+- ctrl_tbl: allows indexing of numeric data from a .txt file with
+optional interpolation of the data
+*** Ambisonic
+- ambi_encode: encode a mono signal up to 8th order ambisonics
+
+*** Synthesizer
+- sine: sine wave made from sine function
+- sine_beatings: sine wave with rhythmic beatings
+- sine_oct: a sine wave spectrum synthesizer, similiar to hsboscil opcode
+*** Instruments
+- sndfl_looper: flexible segment looping of soundfile	
+- sndfl_looper2: like sndfl_looper but with masking of individual
+segments
+- sndfl_looper_ambi: like sndfl_looper but with internal ambisonics
+encoding up to 8th order (needs ambi_encode.udo)
+- sndfl_looper2_ambi: like sndfl_looper_ambi but with masking of
+individual segments (needs ambi_encode.udo)
+*** Filter
+*** Other
+- ambi_spectrum: spatialise a mono signal into a ambisonic field
+(needs ambi_encode.udo)
+
