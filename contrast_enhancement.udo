@@ -14,6 +14,7 @@ opcode contrast_enhancement, a, ak
   aSig2 = sin(aIn * ($M_PI * 2)) * kAmount
 
   aOut = sin(aSig1 + aSig2)
+  aOut dcblock2 aOut
   
   xout aOut
 endop
