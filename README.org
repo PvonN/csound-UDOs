@@ -35,7 +35,11 @@ individual segments (needs ambi_encode.udo)
 - contrast_enhancement: contrast_enhancement from CLM by Bill
   Schottstaedt, make your sound more 'present', subtle harmonics
 *** Filter
+*** Modulation
+- bode_shifer: single-sideband modulation, like in the klangumwandler
+  modules from Harald Bode. Results in frequency shifts
 *** Other
+- transient_tracking: transient tracking of a input signal, outputs a trigger
 - ambi_spectrum: spatialise a mono signal into a ambisonic field
 (needs ambi_encode.udo)
 

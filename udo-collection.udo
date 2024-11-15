@@ -939,7 +939,123 @@ opcode contrast_enhancement, a, ak
 endop
 
 /* filter */
+/* modulation */
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; bode_shifter collection 
+;;;
+;;; single-sideband modulation which results in frequency shifts
+;;; - named after harald bode (klangumwandler)
+;;; - aSum represents the downshifted signal
+;;; - aDiff represents the upshifted signel
+
+opcode bode_shifter, aa, aki
+  /*
+  - iWaveTable can take any Wavetable, but classic wavetable would be
+  a sine
+  - kModFreq is freq shift in Hz
+  */
+  aIn, kModFreq, iWaveTable xin
+
+  aSin, aCos hilbert aIn
+  aModSin poscil 1,kModFreq,iWaveTable,0.0
+  aModCos poscil 1,kModFreq,iWaveTable,0.25
+  aMod1 = aSin * aModCos
+  aMod2 = aCos * aModSin
+  aSum =  (aMod1 + aMod2) * (1.0 / sqrt(2.0))
+  aDiff = (aMod1 - aMod2) * (1.0 / sqrt(2.0))
+
+  xout aSum, aDiff
+endop
+
+opcode bode_shifter, aa, akS
+  /*
+  - Sndfl can be any Sndfl which is supposed to work as a modulation
+  source
+  - kModFreq is the playback speed of the sndfl
+  */
+  aIn, kModFreq, Sndfl xin
+
+  // mod source
+  iChns filenchnls Sndfl 
+  if iChns == 1 then
+    iFt1 ftgen 0,0,0,1,Sndfl,0,0,0
+    iFt2 = iFt1
+  elseif iChns == 2 then
+    iFt1 ftgen 0,0,0,1,Sndfl,0,0,1
+    iFt2 ftgen 0,0,0,1,Sndfl,0,0,2
+  endif
+
+  iFlLen filelen Sndfl
+
+  // modulation
+  aSin, aCos hilbert aIn
+
+  aPhsSin phasor kModFreq / iFlLen, 0
+  aPhsCos phasor kModFreq / iFlLen, 0.25   
+  aModSin table3 aPhsSin, iFt1, 1
+  aModCos table3 aPhsCos, iFt1, 1
+  aMod1 = aSin * aModCos
+  aMod2 = aCos * aModSin
+  aSum =  (aMod1 + aMod2) * (1.0 / sqrt(2.0))
+  aDiff = (aMod1 - aMod2) * (1.0 / sqrt(2.0))
+
+  xout aSum, aDiff
+endop
+
+opcode bode_shifter, aa, aa
+  /*
+  - aModSource can be any audio input which is working as modulation
+  source
+  - kModFreq is freq shift in Hz
+  */
+  aIn, aModSource xin
+
+  aSin, aCos hilbert aIn
+  aModCos, aModSin hilbert aModSource
+  aMod1 = aSin * aModCos
+  aMod2 = aCos * aModSin
+  aSum =  (aMod1 + aMod2) * (1.0 / sqrt(2.0))
+  aDiff = (aMod1 - aMod2) * (1.0 / sqrt(2.0))
+
+  xout aSum, aDiff
+endop
+
 /* other */
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; transient_tracking
+;;; - tracks transients of a input signal above a RMS threshold and
+;;; outputs a trigger signal
+
+opcode transient_tracking, k, ak
+  aSignal, kThresh xin
+  
+  ;; iWait prevents multiple trigger in a very short time
+  ;; value is in samples
+  iWait  = 1000
+  ;; initial timer is bigger then iWait, so a trigger can be generated immediatly
+  kTimer init 1001
+  ;; rms value of signal input
+  kRms rms aSignal, 20
+  ;; the differnce from the actual rms value and the rms value delayed by
+  ;; iSampleTime is kChange
+  ;; if kChange is bigger then kThresh kTrig == 1
+  iSampleTime = 0.01
+  kRmsPrev delayk  kRms, iSampleTime
+  kChange  =       kRms - kRmsPrev
+  
+  if kTimer > iWait then
+    kTrig = (kChange > kThresh ? 1 : 0)
+    ;; reset safety timer when trigger == 1
+    kTimer = (kTrig == 1 ? 0 : kTimer)
+  else
+    kTimer += ksmps
+    kTrig = 0
+  endif
+  
+  ;; output trigger
+  xout kTrig
+endop
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; ambi_spectrum (!needs ambi_encode.udo!)
 ;;; - takes a mono signal as input and creates a lively spectrum in a
