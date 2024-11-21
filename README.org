@@ -19,6 +19,10 @@ optional interpolation of the data
 *** Ambisonic
 - ambi_encode: encode a mono signal up to 8th order ambisonics
 
+*** Algorithm
+- lorenz_arrays: creates arrays based on the lorenz attractor
+for every plane in a 3D field it creates a array and calculates
+movement of a virtual point and saves the positions in the arrays
 *** Synthesizer
 - sine: sine wave made from sine function
 - sine_beatings: sine wave with rhythmic beatings
